@@ -1,0 +1,73 @@
+# AGENTS.md
+
+## Project Overview
+
+TypeScript template for building tool/service projects. Uses ESM-only modules with strict TypeScript, Biome for linting/formatting, Vitest for testing, and semantic-release for automated releases.
+
+## Project Structure
+
+```
+src/
+├── index.ts          # Main entry point, re-exports from lib modules
+├── config/
+│   └── index.ts      # App-level config (imports env, exports typed config)
+└── lib/
+    ├── env.ts        # Environment config (@t3-oss/env-core + Zod)
+    ├── env.test.ts   # Co-located test for env validation
+    ├── example.ts    # Example module
+    └── example.test.ts
+```
+
+## Scripts
+
+| Command | Description |
+|---------|-------------|
+| `pnpm build` | Build with tsup (ESM + declarations) |
+| `pnpm lint` | Check code with Biome |
+| `pnpm lint:fix` | Auto-fix lint/format issues |
+| `pnpm types` | Type-check with tsc --noEmit |
+| `pnpm test` | Run tests with Vitest |
+| `pnpm test:watch` | Run tests in watch mode |
+| `pnpm unused` | Detect unused code with Knip |
+| `pnpm update` | Interactive dependency updates with Taze |
+
+## Testing Conventions
+
+- Tests are **co-located** next to source files: `foo.ts` → `foo.test.ts`
+- Use **TDD** with vertical slices (red → green → refactor, one test at a time)
+- Test **behavior through public interfaces**, not implementation details
+- Run tests: `pnpm test`
+
+## Commit Format
+
+Conventional Commits enforced via commitlint:
+
+```
+<type>(<scope>): <description>
+
+Types: feat, fix, refactor, test, docs, chore, ci, perf
+```
+
+Pre-commit hook runs `pnpm lint && pnpm test` automatically.
+
+## Environment Variables
+
+- Define schemas in `src/lib/env.ts` using `@t3-oss/env-core` + Zod
+- Non-sensitive defaults go in `.env` (committed)
+- Secrets go in `.env.local` (gitignored)
+- Access via: `import { env } from "./lib/env.js"`
+
+## Development Workflow
+
+1. **write-a-prd** — Define requirements through structured interview
+2. **prd-to-plan** — Break PRD into phased vertical slices
+3. **prd-to-issues** — Create GitHub issues from the plan
+4. **tdd** — Implement each slice using test-driven development
+5. **environment-variables** — Manage env vars with validation
+
+## Formatting Rules
+
+- Biome with `ultracite/core` preset
+- Line width: 100
+- Indentation: tabs
+- Unused imports: warned
