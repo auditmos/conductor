@@ -8,13 +8,17 @@ TypeScript template for building tool/service projects. Uses ESM-only modules wi
 
 ```
 src/
-├── index.ts          # Main entry point, re-exports from lib modules
+├── index.ts              # Main entry point, re-exports from lib modules
 ├── config/
-│   └── index.ts      # App-level config (imports env, exports typed config)
+│   └── index.ts          # App-level config (imports env, exports typed config)
 └── lib/
-    ├── env.ts        # Environment config (@t3-oss/env-core + Zod)
-    ├── env.test.ts   # Co-located test for env validation
-    ├── example.ts    # Example module
+    ├── config.ts         # CONDUCTOR.md parser (gray-matter + Zod)
+    ├── config.test.ts    # Config parsing tests
+    ├── template.ts       # {{ variable }} template renderer
+    ├── template.test.ts  # Template rendering tests
+    ├── env.ts            # Environment config (@t3-oss/env-core + Zod)
+    ├── env.test.ts       # Co-located test for env validation
+    ├── example.ts        # Example module
     └── example.test.ts
 ```
 
@@ -71,3 +75,16 @@ Pre-commit hook runs `pnpm lint && pnpm test` automatically.
 - Line width: 100
 - Indentation: tabs
 - Unused imports: warned
+- Run `pnpm lint:fix` after every file creation/edit — don't batch at end
+
+## Known Gotchas
+
+### Zod 4: Nested object defaults don't cascade
+`z.object({ foo: z.string().default("bar") }).default({})` — the `{}` is used as-is, inner defaults are NOT applied.
+**Fix:** Use `z.preprocess((v) => v ?? {}, schema)` instead of `.default({})` for nested object schemas. See `withDefault()` helper in `src/lib/config.ts`.
+
+### Biome: Import ordering is enforced
+After adding/reordering exports in `src/index.ts`, `type` exports sort before value exports from the same module.
+
+### TDD: Batch obvious edge-case tests
+If the tracer bullet implementation clearly handles edge cases (e.g., regex already covers missing keys, empty strings), write all edge-case tests in one slice instead of individual RED-GREEN cycles that all pass immediately. Reserve individual slices for behaviors that need new code.
