@@ -25,9 +25,6 @@
     "commit-msg": "pnpm commitlint --edit $1"
   },
   "knip": {
-    "entry": [
-      "src/index.ts!"
-    ],
     "project": [
       "src/**/*.ts"
     ],
@@ -42,7 +39,6 @@
   },
   "packageManager": "pnpm@10.30.3",
   "dependencies": {
-    "@t3-oss/env-core": "^0.13.10",
     "gray-matter": "^4.0.3",
     "zod": "^4.3.6"
   },

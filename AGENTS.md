@@ -9,15 +9,11 @@ TypeScript template for building tool/service projects. Uses ESM-only modules wi
 ```
 src/
 ├── index.ts              # Main entry point, re-exports from lib modules
-├── config/
-│   └── index.ts          # App-level config (imports env, exports typed config)
 └── lib/
     ├── config.ts         # CONDUCTOR.md parser (gray-matter + Zod)
     ├── config.test.ts    # Config parsing tests
     ├── template.ts       # {{ variable }} template renderer
     ├── template.test.ts  # Template rendering tests
-    ├── env.ts            # Environment config (@t3-oss/env-core + Zod)
-    ├── env.test.ts       # Co-located test for env validation
     ├── example.ts        # Example module
     └── example.test.ts
 ```
@@ -54,20 +50,12 @@ Types: feat, fix, refactor, test, docs, chore, ci, perf
 
 Pre-commit hook runs `pnpm lint && pnpm test` automatically.
 
-## Environment Variables
-
-- Define schemas in `src/lib/env.ts` using `@t3-oss/env-core` + Zod
-- Non-sensitive defaults go in `.env` (committed)
-- Secrets go in `.env.local` (gitignored)
-- Access via: `import { env } from "./lib/env.js"`
-
 ## Development Workflow
 
 1. **write-a-prd** — Define requirements through structured interview
 2. **prd-to-plan** — Break PRD into phased vertical slices
 3. **prd-to-issues** — Create GitHub issues from the plan
 4. **tdd** — Implement each slice using test-driven development
-5. **environment-variables** — Manage env vars with validation
 
 ## Formatting Rules
 
