@@ -5,35 +5,28 @@ function withDefault<T extends z.ZodType>(schema: T) {
   return z.preprocess((v) => v ?? {}, schema);
 }
 
-const statesSchema = z.object({
-  todo: z.string().default("Todo"),
-  in_progress: z.string().default("In Progress"),
-  human_review: z.string().default("Human Review"),
-  rework: z.string().default("Rework"),
-  merging: z.string().default("Merging"),
-  done: z.string().default("Done"),
-  blocked: z.string().default("Blocked"),
+const githubSchema = z.object({
+  owner: z.string(),
+  repo: z.string(),
+  token: z.string(),
 });
 
-const pollingSchema = z.object({
-  interval_ms: z.number().default(10_000),
-  backoff_max_ms: z.number().default(60_000),
+const labelsSchema = z.object({
+  todo: z.string().default("conductor:todo"),
+  in_progress: z.string().default("conductor:in-progress"),
+  review: z.string().default("conductor:review"),
+  rework: z.string().default("conductor:rework"),
+  done: z.string().default("conductor:done"),
+  afk: z.string().default("conductor:afk"),
 });
 
-const trackerSchema = z.object({
-  kind: z.literal("linear"),
-  api_key: z.string(),
-  project_slug: z.string(),
-  team_key: z.string(),
-  states: withDefault(statesSchema),
-  polling: withDefault(pollingSchema),
+const branchSchema = z.object({
+  pattern: z.string().default("conductor/{{number}}-{{slug}}"),
 });
 
 const workspaceSchema = z.object({
-  root: z.string(),
-  hooks: z.object({
-    after_create: z.array(z.string()).default([]),
-  }),
+  root: z.string().default("./workspaces"),
+  after_clone: z.array(z.string()).default([]),
 });
 
 const agentSchema = z.object({
@@ -72,20 +65,26 @@ const prSchema = z.object({
   base_branch: z.string().default("main"),
 });
 
-const logsSchema = z.object({
-  dir: z.string().default("./log"),
-  format: z.enum(["json", "text"]).default("json"),
-  level: z.enum(["debug", "info", "warn", "error"]).default("info"),
+const pollingSchema = z.object({
+  interval_ms: z.number().default(10_000),
+  backoff_max_ms: z.number().default(60_000),
+});
+
+const sequencingSchema = z.object({
+  wait_for_merge: z.boolean().default(true),
 });
 
 const configSchema = z.object({
-  tracker: trackerSchema,
-  workspace: workspaceSchema,
+  github: githubSchema,
+  labels: withDefault(labelsSchema),
+  branch: withDefault(branchSchema),
+  workspace: withDefault(workspaceSchema),
   agent: withDefault(agentSchema),
   validate: withDefault(validateSchema),
   qa: withDefault(qaSchema),
   pr: withDefault(prSchema),
-  logs: withDefault(logsSchema),
+  polling: withDefault(pollingSchema),
+  sequencing: withDefault(sequencingSchema),
 });
 
 export type ConductorConfig = z.infer<typeof configSchema> & {

@@ -2,151 +2,134 @@ import { describe, expect, it } from "vitest";
 import { parseConfig } from "./config.js";
 
 const MINIMAL_CONFIG = `---
-tracker:
-  kind: linear
-  api_key: test-key
-  project_slug: my-project
-  team_key: MP
+github:
+  owner: auditmos
+  repo: conductor
+  token: ghp_test123
 workspace:
-  root: /tmp/workspaces
-  hooks:
-    after_create:
-      - "git clone git@github.com:org/repo.git ."
+  root: ./workspaces
 ---
-You are implementing {{ issue.identifier }}: {{ issue.title }}.
+You are implementing {{ issue.title }}.
 `;
 
 describe("parseConfig", () => {
-  it("parses valid CONDUCTOR.md into typed config with prompt template", () => {
+  it("parses minimal valid config into typed output", () => {
     const config = parseConfig(MINIMAL_CONFIG);
 
-    expect(config.tracker.kind).toBe("linear");
-    expect(config.tracker.api_key).toBe("test-key");
-    expect(config.tracker.project_slug).toBe("my-project");
-    expect(config.tracker.team_key).toBe("MP");
-    expect(config.workspace.root).toBe("/tmp/workspaces");
-    expect(config.workspace.hooks.after_create).toEqual([
-      "git clone git@github.com:org/repo.git .",
-    ]);
-    expect(config.promptTemplate).toContain("{{ issue.identifier }}");
+    expect(config.github.owner).toBe("auditmos");
+    expect(config.github.repo).toBe("conductor");
+    expect(config.github.token).toBe("ghp_test123");
+    expect(config.workspace.root).toBe("./workspaces");
+    expect(config.promptTemplate).toContain("{{ issue.title }}");
   });
 
   it("applies sensible defaults for optional fields", () => {
     const config = parseConfig(MINIMAL_CONFIG);
 
-    expect(config.tracker.states.todo).toBe("Todo");
-    expect(config.tracker.states.in_progress).toBe("In Progress");
-    expect(config.tracker.polling.interval_ms).toBe(10_000);
+    // labels
+    expect(config.labels.todo).toBe("conductor:todo");
+    expect(config.labels.in_progress).toBe("conductor:in-progress");
+    expect(config.labels.review).toBe("conductor:review");
+    expect(config.labels.rework).toBe("conductor:rework");
+    expect(config.labels.done).toBe("conductor:done");
+    expect(config.labels.afk).toBe("conductor:afk");
+
+    // branch
+    expect(config.branch.pattern).toBe("conductor/{{number}}-{{slug}}");
+
+    // workspace defaults
+    expect(config.workspace.after_clone).toEqual([]);
+
+    // agent
     expect(config.agent.command).toBe("claude");
+    expect(config.agent.max_turns).toBe(10);
     expect(config.agent.retry_budget).toBe(3);
+    expect(config.agent.timeout_minutes).toBe(30);
     expect(config.agent.max_cost_per_issue).toBe(5.0);
+
+    // validate
     expect(config.validate.commands).toEqual([]);
+
+    // qa
     expect(config.qa.enabled).toBe(true);
+    expect(config.qa.screenshot_dir).toBe(".conductor/screenshots");
+    expect(config.qa.max_retries).toBe(3);
+
+    // pr
+    expect(config.pr.draft).toBe(false);
+    expect(config.pr.labels).toEqual(["conductor"]);
+    expect(config.pr.reviewers).toEqual([]);
     expect(config.pr.base_branch).toBe("main");
-    expect(config.logs.level).toBe("info");
-    expect(config.logs.format).toBe("json");
+
+    // polling
+    expect(config.polling.interval_ms).toBe(10_000);
+    expect(config.polling.backoff_max_ms).toBe(60_000);
+
+    // sequencing
+    expect(config.sequencing.wait_for_merge).toBe(true);
   });
 
   it("resolves $ENV_VAR references from provided env", () => {
     const raw = `---
-tracker:
-  kind: linear
-  api_key: $LINEAR_API_KEY
-  project_slug: my-project
-  team_key: MP
-workspace:
-  root: /tmp/workspaces
-  hooks:
-    after_create: []
+github:
+  owner: auditmos
+  repo: conductor
+  token: $GITHUB_TOKEN
 ---
 `;
-    const config = parseConfig(raw, { LINEAR_API_KEY: "lin_secret_123" });
-    expect(config.tracker.api_key).toBe("lin_secret_123");
+    const config = parseConfig(raw, { GITHUB_TOKEN: "ghp_secret_123" });
+    expect(config.github.token).toBe("ghp_secret_123");
   });
 
   it("throws descriptive error when referenced env var is missing", () => {
     const raw = `---
-tracker:
-  kind: linear
-  api_key: $LINEAR_API_KEY
-  project_slug: my-project
-  team_key: MP
-workspace:
-  root: /tmp/workspaces
-  hooks:
-    after_create: []
+github:
+  owner: auditmos
+  repo: conductor
+  token: $GITHUB_TOKEN
 ---
 `;
     expect(() => parseConfig(raw, {})).toThrowError(
-      "Missing required environment variable: LINEAR_API_KEY"
+      "Missing required environment variable: GITHUB_TOKEN"
     );
-  });
-
-  it("rejects config with missing required fields", () => {
-    const raw = `---
-tracker:
-  kind: linear
----
-`;
-    expect(() => parseConfig(raw, {})).toThrow();
-  });
-
-  it("rejects invalid tracker kind", () => {
-    const raw = `---
-tracker:
-  kind: jira
-  api_key: key
-  project_slug: proj
-  team_key: TK
-workspace:
-  root: /tmp
-  hooks:
-    after_create: []
----
-`;
-    expect(() => parseConfig(raw, {})).toThrow();
   });
 
   it("extracts markdown body as prompt template", () => {
     const raw = `---
-tracker:
-  kind: linear
-  api_key: key
-  project_slug: proj
-  team_key: TK
-workspace:
-  root: /tmp
-  hooks:
-    after_create: []
+github:
+  owner: auditmos
+  repo: conductor
+  token: tok
 ---
-# Implementation Instructions
+# Instructions
 
-You are working on {{ issue.identifier }}: {{ issue.title }}.
+You are working on {{ issue.title }}.
 
-{{ issue.description }}
+{{ issue.body }}
 `;
     const config = parseConfig(raw, {});
     expect(config.promptTemplate).toBe(
-      "# Implementation Instructions\n\nYou are working on {{ issue.identifier }}: {{ issue.title }}.\n\n{{ issue.description }}"
+      "# Instructions\n\nYou are working on {{ issue.title }}.\n\n{{ issue.body }}"
     );
   });
 
-  it("sets empty prompt template when body is blank", () => {
-    const config = parseConfig(
-      `---
-tracker:
-  kind: linear
-  api_key: key
-  project_slug: proj
-  team_key: TK
-workspace:
-  root: /tmp
-  hooks:
-    after_create: []
+  it("throws on missing required github fields", () => {
+    const raw = `---
+github:
+  owner: auditmos
 ---
-`,
-      {}
-    );
-    expect(config.promptTemplate).toBe("");
+`;
+    expect(() => parseConfig(raw, {})).toThrow();
+  });
+
+  it("sets empty prompt template when body is blank", () => {
+    const raw = `---
+github:
+  owner: auditmos
+  repo: conductor
+  token: tok
+---
+`;
+    expect(parseConfig(raw, {}).promptTemplate).toBe("");
   });
 });

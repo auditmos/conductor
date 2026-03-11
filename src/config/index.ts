@@ -1,5 +1,2 @@
-import { env } from "../lib/env.js";
-
-export const config = {
-  env,
-} as const;
+export type { ConductorConfig } from "../lib/config.js";
+export { parseConfig } from "../lib/config.js";
