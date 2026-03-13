@@ -12,7 +12,6 @@
     }
   },
   "scripts": {
-    "prepublishOnly": "pnpm build",
     "build": "tsup",
     "lint": "biome check",
     "lint:fix": "biome check --write",
@@ -21,7 +20,7 @@
     "test:watch": "vitest",
     "unused": "knip",
     "update": "taze --interactive",
-    "prepare": "simple-git-hooks || true"
+    "prepare": "tsup && simple-git-hooks || true"
   },
   "simple-git-hooks": {
     "pre-commit": "pnpm lint && pnpm test",
