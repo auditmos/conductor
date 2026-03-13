@@ -9,3 +9,4 @@ export { loadState, saveState, updateIssue } from "./lib/state.js";
 export { renderTemplate } from "./lib/template.js";
 export type { ValidationResult } from "./lib/validation.js";
 export { runValidation } from "./lib/validation.js";
+export { cleanupWorkspace, createWorkspace, slugify } from "./lib/workspace.js";
