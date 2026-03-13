@@ -1,7 +1,6 @@
 {
   "name": "conductor",
   "version": "0.0.0",
-  "private": true,
   "type": "module",
   "bin": {
     "conductor": "./dist/cli.js"
@@ -13,6 +12,7 @@
     }
   },
   "scripts": {
+    "prepublishOnly": "pnpm build",
     "build": "tsup",
     "lint": "biome check",
     "lint:fix": "biome check --write",

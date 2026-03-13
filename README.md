@@ -139,6 +139,19 @@ You also need:
 - A [GitHub personal access token](https://github.com/settings/tokens) with repo scope.
 - An [Anthropic API key](https://console.anthropic.com) for Claude Code (or a Claude Code subscription).
 
+## Install
+
+```bash
+# Install globally from GitHub
+npm install -g github:auditmos/conductor
+
+# Verify
+conductor --help
+
+# Uninstall
+npm uninstall -g conductor
+```
+
 ## Usage
 
 ```bash
