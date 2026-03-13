@@ -4,7 +4,7 @@ import { runValidation } from "./validation.js";
 
 vi.mock("execa");
 
-const mockExecaCommand = execaCommand as MockedFunction<typeof execaCommand>;
+const mockExecaCommand = execaCommand as unknown as MockedFunction<typeof execaCommand>;
 
 describe("runValidation", () => {
   it("returns ok for empty command list", async () => {
