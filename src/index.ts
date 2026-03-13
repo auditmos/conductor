@@ -1,3 +1,5 @@
+export type { AgentResult } from "./lib/agent.js";
+export { buildPrompt, runAgent } from "./lib/agent.js";
 export type { ConductorConfig } from "./lib/config.js";
 export { parseConfig } from "./lib/config.js";
 export type { Issue } from "./lib/github.js";
