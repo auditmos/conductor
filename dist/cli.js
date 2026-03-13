@@ -384,7 +384,7 @@ async function runValidation(commands, cwd) {
 }
 
 // src/lib/workspace.ts
-import { rm } from "fs/promises";
+import { mkdir, rm } from "fs/promises";
 import { join } from "path";
 import { execaCommand as execaCommand3 } from "execa";
 function slugify(issueNumber, title) {
@@ -397,6 +397,7 @@ async function createWorkspace(config, issueNumber, title) {
   const dir = join(config.workspace.root, dirName);
   const { owner, repo, token } = config.github;
   const url = `https://x-access-token:${token}@github.com/${owner}/${repo}.git`;
+  await mkdir(config.workspace.root, { recursive: true });
   await execaCommand3(`git clone ${url} ${dirName}`, { cwd: config.workspace.root });
   await execaCommand3(`git checkout -b ${branch}`, { cwd: dir });
   for (const hook of config.workspace.after_clone) {

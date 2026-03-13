@@ -1,4 +1,4 @@
-import { rm } from "node:fs/promises";
+import { mkdir, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { execaCommand } from "execa";
 import type { ConductorConfig } from "./config.js";
@@ -22,6 +22,7 @@ export async function createWorkspace(
   const { owner, repo, token } = config.github;
   const url = `https://x-access-token:${token}@github.com/${owner}/${repo}.git`;
 
+  await mkdir(config.workspace.root, { recursive: true });
   await execaCommand(`git clone ${url} ${dirName}`, { cwd: config.workspace.root });
   await execaCommand(`git checkout -b ${branch}`, { cwd: dir });
 
