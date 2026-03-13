@@ -12,6 +12,7 @@ function createMockOctokit() {
       },
       pulls: {
         create: vi.fn(),
+        requestReviewers: vi.fn(),
       },
     },
   };
@@ -157,8 +158,57 @@ describe("GitHubClient", () => {
         base: "main",
         title: "Add auth",
         body: "PR body here",
+        draft: false,
       });
       expect(prNumber).toBe(99);
+    });
+
+    it("passes draft flag when specified", async () => {
+      const { client, octokit } = createClient();
+      octokit.rest.pulls.create.mockResolvedValue({
+        data: { number: 100 },
+      });
+
+      const prNumber = await client.createPR("feature/auth", "main", "Add auth", "body", {
+        draft: true,
+      });
+
+      expect(octokit.rest.pulls.create).toHaveBeenCalledWith(
+        expect.objectContaining({ draft: true })
+      );
+      expect(prNumber).toBe(100);
+    });
+  });
+
+  describe("addLabels", () => {
+    it("adds labels to an issue or PR", async () => {
+      const { client, octokit } = createClient();
+      octokit.rest.issues.addLabels.mockResolvedValue({});
+
+      await client.addLabels(99, ["conductor", "bug"]);
+
+      expect(octokit.rest.issues.addLabels).toHaveBeenCalledWith({
+        owner: "acme",
+        repo: "widgets",
+        issue_number: 99,
+        labels: ["conductor", "bug"],
+      });
+    });
+  });
+
+  describe("requestReviewers", () => {
+    it("requests reviewers on a pull request", async () => {
+      const { client, octokit } = createClient();
+      octokit.rest.pulls.requestReviewers.mockResolvedValue({});
+
+      await client.requestReviewers(99, ["alice", "bob"]);
+
+      expect(octokit.rest.pulls.requestReviewers).toHaveBeenCalledWith({
+        owner: "acme",
+        repo: "widgets",
+        pull_number: 99,
+        reviewers: ["alice", "bob"],
+      });
     });
   });
 

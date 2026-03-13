@@ -4,6 +4,7 @@ export type { ConductorConfig } from "./lib/config.js";
 export { parseConfig } from "./lib/config.js";
 export type { Issue } from "./lib/github.js";
 export { GitHubClient } from "./lib/github.js";
+export { buildPRBody, createPR, pushBranch } from "./lib/pr.js";
 export type { QAResult } from "./lib/qa.js";
 export { runQA } from "./lib/qa.js";
 export type { IssueState, State } from "./lib/state.js";

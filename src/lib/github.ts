@@ -73,7 +73,13 @@ export class GitHubClient {
     });
   }
 
-  async createPR(head: string, base: string, title: string, body: string): Promise<number> {
+  async createPR(
+    head: string,
+    base: string,
+    title: string,
+    body: string,
+    opts: { draft?: boolean } = {}
+  ): Promise<number> {
     const { data } = await this.octokit.rest.pulls.create({
       owner: this.owner,
       repo: this.repo,
@@ -81,8 +87,27 @@ export class GitHubClient {
       base,
       title,
       body,
+      draft: opts.draft ?? false,
     });
     return data.number;
+  }
+
+  async addLabels(prNumber: number, labels: string[]): Promise<void> {
+    await this.octokit.rest.issues.addLabels({
+      owner: this.owner,
+      repo: this.repo,
+      issue_number: prNumber,
+      labels,
+    });
+  }
+
+  async requestReviewers(prNumber: number, reviewers: string[]): Promise<void> {
+    await this.octokit.rest.pulls.requestReviewers({
+      owner: this.owner,
+      repo: this.repo,
+      pull_number: prNumber,
+      reviewers,
+    });
   }
 
   async isIssueClosed(issueNumber: number): Promise<boolean> {
