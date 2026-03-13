@@ -4,6 +4,8 @@ export type { ConductorConfig } from "./lib/config.js";
 export { parseConfig } from "./lib/config.js";
 export type { Issue } from "./lib/github.js";
 export { GitHubClient } from "./lib/github.js";
+export type { OrchestratorDeps, Phase } from "./lib/orchestrator.js";
+export { parseBlockedBy, run, tick } from "./lib/orchestrator.js";
 export { buildPRBody, createPR, pushBranch } from "./lib/pr.js";
 export type { QAResult } from "./lib/qa.js";
 export { runQA } from "./lib/qa.js";

@@ -119,6 +119,31 @@ export class GitHubClient {
     return data.state === "closed";
   }
 
+  async isPRMerged(prNumber: number): Promise<boolean> {
+    try {
+      await this.octokit.rest.pulls.checkIfMerged({
+        owner: this.owner,
+        repo: this.repo,
+        pull_number: prNumber,
+      });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  async getReviewComments(prNumber: number): Promise<string> {
+    const { data } = await this.octokit.rest.pulls.listReviews({
+      owner: this.owner,
+      repo: this.repo,
+      pull_number: prNumber,
+    });
+    return data
+      .filter((r) => r.body)
+      .map((r) => r.body)
+      .join("\n\n");
+  }
+
   async getParentPRD(issueBody: string): Promise<string | null> {
     const match = PARENT_PRD_RE.exec(issueBody);
     if (!match) {
