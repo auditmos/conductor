@@ -40,6 +40,7 @@
   "packageManager": "pnpm@10.30.3",
   "dependencies": {
     "@octokit/rest": "^22.0.1",
+    "execa": "^9.6.1",
     "gray-matter": "^4.0.3",
     "zod": "^4.3.6"
   },
