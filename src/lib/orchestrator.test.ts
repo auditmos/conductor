@@ -406,44 +406,20 @@ describe("run", () => {
     // Tick 2: { 42: WAITING } → isPRMerged false → WAITING
     // Tick 3: { 42: WAITING } → isPRMerged true → DONE
     // Tick 4: { 42: DONE } → pick issue43 → pipeline → WAITING → abort
-    let tickCount = 0;
-    vi.mocked(loadState).mockImplementation(() => {
-      tickCount++;
-      switch (tickCount) {
-        case 1: // tick 1: tick() entry
-          return {};
-        case 2: // tick 1: runPipeline() entry
-          return {};
-        case 3: // tick 2: tick() entry — issue42 now in WAITING
-          return {
-            42: {
-              phase: "WAITING",
-              branch: "conductor/42-fix-login-bug",
-              prNumber: 201,
-              retries: 0,
-            },
-          };
-        case 4: // tick 3: tick() entry — still WAITING, but PR now merged
-          return {
-            42: {
-              phase: "WAITING",
-              branch: "conductor/42-fix-login-bug",
-              prNumber: 201,
-              retries: 0,
-            },
-          };
-        case 5: // tick 4: tick() entry — issue42 DONE, ready for next
-          return {
-            42: { phase: "DONE", branch: "conductor/42-fix-login-bug", prNumber: 201, retries: 0 },
-          };
-        case 6: // tick 4: runPipeline() entry
-          return {
-            42: { phase: "DONE", branch: "conductor/42-fix-login-bug", prNumber: 201, retries: 0 },
-          };
-        default:
-          return {};
-      }
-    });
+    const issue42Waiting = {
+      42: { phase: "WAITING", branch: "conductor/42-fix-login-bug", prNumber: 201, retries: 0 },
+    };
+    const issue42Done = {
+      42: { phase: "DONE", branch: "conductor/42-fix-login-bug", prNumber: 201, retries: 0 },
+    };
+    vi.mocked(loadState)
+      .mockResolvedValueOnce({}) // tick 1: tick() entry
+      .mockResolvedValueOnce({}) // tick 1: runPipeline() entry
+      .mockResolvedValueOnce(issue42Waiting) // tick 2: tick() entry
+      .mockResolvedValueOnce(issue42Waiting) // tick 3: tick() entry, PR now merged
+      .mockResolvedValueOnce(issue42Done) // tick 4: tick() entry
+      .mockResolvedValueOnce(issue42Done) // tick 4: runPipeline() entry
+      .mockResolvedValue({}); // default
 
     // listIssues is called for rework (always []) and for todo (depends on tick)
     let listCallCount = 0;
@@ -473,12 +449,16 @@ describe("run", () => {
     vi.mocked(runQA).mockReturnValue({ ok: true, skipped: true });
     vi.mocked(createPR).mockResolvedValueOnce(201).mockResolvedValueOnce(202);
 
-    // Abort after tick 4 completes (via saveState spy)
+    // Abort after second pipeline completes (via saveState spy)
+    let saveCallCount = 0;
     vi.mocked(saveState).mockImplementation(() => {
-      // After tick 4's final saveState (WAITING for issue43), abort
-      if (tickCount >= 6) {
+      saveCallCount++;
+      // Each pipeline has ~5 saveState calls, plus 1 for DONE transition
+      // Abort after enough calls to complete both pipelines
+      if (saveCallCount >= 11) {
         controller.abort();
       }
+      return Promise.resolve();
     });
 
     const config = makeConfig({ polling: { interval_ms: 1, backoff_max_ms: 10 } });
