@@ -1,0 +1,9 @@
+src/
+*.test.ts
+coverage/
+.conductor-state.json
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
