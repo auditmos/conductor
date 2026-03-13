@@ -21,7 +21,7 @@
     "test:watch": "vitest",
     "unused": "knip",
     "update": "taze --interactive",
-    "prepare": "simple-git-hooks"
+    "prepare": "simple-git-hooks || true"
   },
   "simple-git-hooks": {
     "pre-commit": "pnpm lint && pnpm test",
