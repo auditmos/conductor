@@ -2,7 +2,7 @@ import { execaCommand } from "execa";
 import { describe, expect, it, type MockedFunction, vi } from "vitest";
 import type { ConductorConfig } from "./config.js";
 import type { Issue } from "./github.js";
-import { buildPRBody, createPR, pushBranch } from "./pr.js";
+import { buildPRBody, commitChanges, createPR, pushBranch } from "./pr.js";
 
 vi.mock("execa");
 
@@ -28,6 +28,42 @@ describe("pushBranch", () => {
       "git push --force-with-lease -u origin conductor/42-fix-bug",
       { cwd: "/tmp/workspace" }
     );
+  });
+});
+
+describe("commitChanges", () => {
+  it("stages all changes and commits with issue-based message", async () => {
+    mockExecaCommand.mockResolvedValue({} as never);
+
+    await commitChanges("/tmp/ws", 42, "Fix login bug");
+
+    expect(mockExecaCommand).toHaveBeenCalledWith("git add -A", { cwd: "/tmp/ws" });
+    expect(mockExecaCommand).toHaveBeenCalledWith(
+      expect.stringContaining("git commit"),
+      expect.objectContaining({ cwd: "/tmp/ws" })
+    );
+    const commitCall = mockExecaCommand.mock.calls.find((c) =>
+      (c[0] as string).includes("git commit")
+    );
+    expect(commitCall?.[0]).toContain("#42");
+  });
+
+  it("returns true when there are changes to commit", async () => {
+    mockExecaCommand.mockResolvedValue({} as never);
+
+    const result = await commitChanges("/tmp/ws", 42, "Fix login bug");
+
+    expect(result).toBe(true);
+  });
+
+  it("returns false when there are no changes to commit", async () => {
+    mockExecaCommand
+      .mockResolvedValueOnce({} as never) // git add -A
+      .mockRejectedValueOnce(new Error("nothing to commit")); // git commit fails
+
+    const result = await commitChanges("/tmp/ws", 42, "Fix login bug");
+
+    expect(result).toBe(false);
   });
 });
 

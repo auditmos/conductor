@@ -1,7 +1,7 @@
 import { buildPrompt, runAgent } from "./agent.js";
 import type { ConductorConfig } from "./config.js";
 import type { GitHubClient, Issue } from "./github.js";
-import { createPR, pushBranch } from "./pr.js";
+import { commitChanges, createPR, pushBranch } from "./pr.js";
 import { runQA } from "./qa.js";
 import type { IssueState } from "./state.js";
 import { loadState, saveState, updateIssue } from "./state.js";
@@ -140,7 +140,8 @@ async function runPipeline(
   state = updateIssue(state, issue.number, { phase: "PR" });
   await saveState(statePath, state);
 
-  // PR: push and create
+  // PR: commit, push, and create
+  await commitChanges(dir, issue.number, issue.title);
   const force = isRework;
   await pushBranch(dir, branch, force);
   const validationOutput = "All checks passed";

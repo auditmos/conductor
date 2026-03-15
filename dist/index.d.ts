@@ -150,6 +150,7 @@ interface CliOptions {
 }
 declare function startCli(argv: string[], options?: CliOptions): Promise<void>;
 
+declare function commitChanges(cwd: string, issueNumber: number, title: string): Promise<boolean>;
 declare function pushBranch(cwd: string, branch: string, force?: boolean): Promise<void>;
 declare function buildPRBody(issue: Issue, validationOutput: string): string;
 declare function createPR(github: GitHubClient, config: ConductorConfig, issue: Issue, branch: string, validationOutput: string): Promise<number>;
@@ -178,4 +179,4 @@ declare function createWorkspace(config: ConductorConfig, issueNumber: number, t
 }>;
 declare function cleanupWorkspace(dir: string): Promise<void>;
 
-export { type AgentResult, type CliOptions, type ConductorConfig, GitHubClient, type Issue, type IssueState, type OrchestratorDeps, type Phase, type QAResult, type State, type ValidationResult, buildPRBody, buildPrompt, cleanupWorkspace, createPR, createWorkspace, loadState, parseArgs, parseBlockedBy, parseConfig, pushBranch, renderTemplate, run, runAgent, runQA, runValidation, saveState, slugify, startCli, tick, updateIssue };
+export { type AgentResult, type CliOptions, type ConductorConfig, GitHubClient, type Issue, type IssueState, type OrchestratorDeps, type Phase, type QAResult, type State, type ValidationResult, buildPRBody, buildPrompt, cleanupWorkspace, commitChanges, createPR, createWorkspace, loadState, parseArgs, parseBlockedBy, parseConfig, pushBranch, renderTemplate, run, runAgent, runQA, runValidation, saveState, slugify, startCli, tick, updateIssue };

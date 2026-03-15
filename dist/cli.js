@@ -300,6 +300,15 @@ async function runAgent(options) {
 
 // src/lib/pr.ts
 import { execaCommand } from "execa";
+async function commitChanges(cwd, issueNumber, title) {
+  await execaCommand("git add -A", { cwd });
+  try {
+    await execaCommand(`git commit -m "feat(#${issueNumber}): ${title}"`, { cwd });
+    return true;
+  } catch {
+    return false;
+  }
+}
 async function pushBranch(cwd, branch, force = false) {
   const forceFlag = force ? "--force-with-lease " : "";
   await execaCommand(`git push ${forceFlag}-u origin ${branch}`, { cwd });
@@ -495,6 +504,7 @@ async function runPipeline(deps, issue, isRework, existingState) {
   }
   state = updateIssue(state, issue.number, { phase: "PR" });
   await saveState(statePath, state);
+  await commitChanges(dir, issue.number, issue.title);
   const force = isRework;
   await pushBranch(dir, branch, force);
   const validationOutput = "All checks passed";

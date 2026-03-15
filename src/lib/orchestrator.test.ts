@@ -3,7 +3,7 @@ import { buildPrompt, runAgent } from "./agent.js";
 import type { ConductorConfig } from "./config.js";
 import type { GitHubClient, Issue } from "./github.js";
 import { parseBlockedBy, run, tick } from "./orchestrator.js";
-import { createPR, pushBranch } from "./pr.js";
+import { commitChanges, createPR, pushBranch } from "./pr.js";
 import { runQA } from "./qa.js";
 import { loadState, saveState } from "./state.js";
 import { runValidation } from "./validation.js";
@@ -34,6 +34,7 @@ vi.mock("./qa.js", () => ({
 }));
 
 vi.mock("./pr.js", () => ({
+  commitChanges: vi.fn(),
   pushBranch: vi.fn(),
   createPR: vi.fn(),
 }));
@@ -304,6 +305,31 @@ describe("tick", () => {
     expect(secondCall).toBeDefined();
     expect(secondCall?.[0].prompt).toContain("pnpm lint");
     expect(secondCall?.[0].prompt).toContain("Unexpected token");
+  });
+
+  it("commits changes before pushing branch", async () => {
+    const github = createMockGitHub({
+      listIssues: mockListIssues([issue]),
+    });
+    vi.mocked(createWorkspace).mockResolvedValue({
+      dir: "/tmp/ws",
+      branch: "conductor/42-fix-login-bug",
+    });
+    vi.mocked(runAgent).mockResolvedValue({ ok: true, attempts: 1 });
+    vi.mocked(runValidation).mockResolvedValue({ ok: true });
+    vi.mocked(runQA).mockReturnValue({ ok: true, skipped: true });
+    vi.mocked(commitChanges).mockResolvedValue(true);
+    vi.mocked(createPR).mockResolvedValue(101);
+
+    await tick({ github, config: makeConfig(), statePath: "/tmp/state.json" });
+
+    expect(commitChanges).toHaveBeenCalledWith("/tmp/ws", 42, "Fix login bug");
+    expect(pushBranch).toHaveBeenCalled();
+
+    // commitChanges must be called before pushBranch
+    const commitOrder = vi.mocked(commitChanges).mock.invocationCallOrder[0];
+    const pushOrder = vi.mocked(pushBranch).mock.invocationCallOrder[0];
+    expect(commitOrder).toBeLessThan(pushOrder ?? 0);
   });
 
   it("passes validate.timeout_ms to runValidation", async () => {

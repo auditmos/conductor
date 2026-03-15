@@ -2,6 +2,20 @@ import { execaCommand } from "execa";
 import type { ConductorConfig } from "./config.js";
 import type { GitHubClient, Issue } from "./github.js";
 
+export async function commitChanges(
+  cwd: string,
+  issueNumber: number,
+  title: string
+): Promise<boolean> {
+  await execaCommand("git add -A", { cwd });
+  try {
+    await execaCommand(`git commit -m "feat(#${issueNumber}): ${title}"`, { cwd });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function pushBranch(cwd: string, branch: string, force = false): Promise<void> {
   const forceFlag = force ? "--force-with-lease " : "";
   await execaCommand(`git push ${forceFlag}-u origin ${branch}`, { cwd });
