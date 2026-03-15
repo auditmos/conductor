@@ -32,7 +32,7 @@ function makeConfig(overrides: Partial<ConductorConfig> = {}): ConductorConfig {
       model: null,
       max_cost_per_issue: 5.0,
     },
-    validate: { commands: [] },
+    validate: { commands: [], timeout_ms: 300_000 },
     qa: { enabled: false, screenshot_dir: ".conductor/screenshots", max_retries: 3 },
     pr: { draft: false, labels: ["conductor"], reviewers: [], base_branch: "main" },
     polling: { interval_ms: 10_000, backoff_max_ms: 60_000 },

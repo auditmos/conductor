@@ -64,7 +64,7 @@ function makeConfig(overrides: Partial<ConductorConfig> = {}): ConductorConfig {
       model: null,
       max_cost_per_issue: 5.0,
     },
-    validate: { commands: ["pnpm test"] },
+    validate: { commands: ["pnpm test"], timeout_ms: 300_000 },
     qa: { enabled: false, screenshot_dir: ".conductor/screenshots", max_retries: 3 },
     pr: {
       draft: true,
@@ -227,6 +227,102 @@ describe("tick", () => {
 
     expect(phase).toBe("VALIDATE");
     expect(runQA).not.toHaveBeenCalled();
+  });
+
+  it("retries agent when validation fails, then succeeds on retry", async () => {
+    const github = createMockGitHub({
+      listIssues: mockListIssues([issue]),
+    });
+    vi.mocked(createWorkspace).mockResolvedValue({
+      dir: "/tmp/ws",
+      branch: "conductor/42-fix-login-bug",
+    });
+    // Agent succeeds both times
+    vi.mocked(runAgent).mockResolvedValue({ ok: true, attempts: 1 });
+    // Validation fails first, then passes on retry
+    vi.mocked(runValidation)
+      .mockResolvedValueOnce({ ok: false, command: "pnpm lint", output: "Error: bad format" })
+      .mockResolvedValueOnce({ ok: true });
+    vi.mocked(runQA).mockReturnValue({ ok: true, skipped: true });
+    vi.mocked(createPR).mockResolvedValue(101);
+
+    const phase = await tick({ github, config: makeConfig(), statePath: "/tmp/state.json" });
+
+    // Pipeline should continue to WAITING after retry succeeds
+    expect(phase).toBe("WAITING");
+    // Agent should have been called twice: once for initial implementation, once for fix
+    expect(runAgent).toHaveBeenCalledTimes(2);
+    // Validation should have been called twice
+    expect(runValidation).toHaveBeenCalledTimes(2);
+  });
+
+  it("stops at VALIDATE after exhausting retry budget on validation failures", async () => {
+    const github = createMockGitHub({
+      listIssues: mockListIssues([issue]),
+    });
+    vi.mocked(createWorkspace).mockResolvedValue({
+      dir: "/tmp/ws",
+      branch: "conductor/42-fix-login-bug",
+    });
+    vi.mocked(runAgent).mockResolvedValue({ ok: true, attempts: 1 });
+    // Validation always fails
+    vi.mocked(runValidation).mockResolvedValue({
+      ok: false,
+      command: "pnpm lint",
+      output: "Error: bad format",
+    });
+
+    const config = makeConfig({ agent: { ...makeConfig().agent, retry_budget: 2 } });
+    const phase = await tick({ github, config, statePath: "/tmp/state.json" });
+
+    expect(phase).toBe("VALIDATE");
+    // 1 initial + 2 retries = 3 agent calls
+    expect(runAgent).toHaveBeenCalledTimes(3);
+    // 3 validation attempts
+    expect(runValidation).toHaveBeenCalledTimes(3);
+  });
+
+  it("includes validation error in retry prompt", async () => {
+    const github = createMockGitHub({
+      listIssues: mockListIssues([issue]),
+    });
+    vi.mocked(createWorkspace).mockResolvedValue({
+      dir: "/tmp/ws",
+      branch: "conductor/42-fix-login-bug",
+    });
+    vi.mocked(runAgent).mockResolvedValue({ ok: true, attempts: 1 });
+    vi.mocked(runValidation)
+      .mockResolvedValueOnce({ ok: false, command: "pnpm lint", output: "Unexpected token" })
+      .mockResolvedValueOnce({ ok: true });
+    vi.mocked(runQA).mockReturnValue({ ok: true, skipped: true });
+    vi.mocked(createPR).mockResolvedValue(101);
+
+    await tick({ github, config: makeConfig(), statePath: "/tmp/state.json" });
+
+    // Second runAgent call should have a prompt containing the validation error
+    const secondCall = vi.mocked(runAgent).mock.calls[1];
+    expect(secondCall).toBeDefined();
+    expect(secondCall?.[0].prompt).toContain("pnpm lint");
+    expect(secondCall?.[0].prompt).toContain("Unexpected token");
+  });
+
+  it("passes validate.timeout_ms to runValidation", async () => {
+    const github = createMockGitHub({
+      listIssues: mockListIssues([issue]),
+    });
+    vi.mocked(createWorkspace).mockResolvedValue({
+      dir: "/tmp/ws",
+      branch: "conductor/42-fix-login-bug",
+    });
+    vi.mocked(runAgent).mockResolvedValue({ ok: true, attempts: 1 });
+    vi.mocked(runValidation).mockResolvedValue({ ok: true });
+    vi.mocked(runQA).mockReturnValue({ ok: true, skipped: true });
+    vi.mocked(createPR).mockResolvedValue(101);
+
+    const config = makeConfig({ validate: { commands: ["pnpm lint"], timeout_ms: 120_000 } });
+    await tick({ github, config, statePath: "/tmp/state.json" });
+
+    expect(runValidation).toHaveBeenCalledWith(["pnpm lint"], "/tmp/ws", 120_000);
   });
 
   it("picks up an issue and runs the full pipeline to WAITING", async () => {

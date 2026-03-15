@@ -33,6 +33,7 @@ declare const configSchema: z.ZodObject<{
     }, z.core.$strip>>;
     validate: z.ZodPipe<z.ZodTransform<{}, unknown>, z.ZodObject<{
         commands: z.ZodDefault<z.ZodArray<z.ZodString>>;
+        timeout_ms: z.ZodDefault<z.ZodNumber>;
     }, z.core.$strip>>;
     qa: z.ZodPipe<z.ZodTransform<{}, unknown>, z.ZodObject<{
         enabled: z.ZodDefault<z.ZodBoolean>;
@@ -168,7 +169,7 @@ type ValidationResult = {
     command: string;
     output: string;
 };
-declare function runValidation(commands: string[], cwd: string): Promise<ValidationResult>;
+declare function runValidation(commands: string[], cwd: string, timeout?: number): Promise<ValidationResult>;
 
 declare function slugify(issueNumber: number, title: string): string;
 declare function createWorkspace(config: ConductorConfig, issueNumber: number, title: string): Promise<{

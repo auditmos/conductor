@@ -49,6 +49,7 @@ describe("parseConfig", () => {
 
     // validate
     expect(config.validate.commands).toEqual([]);
+    expect(config.validate.timeout_ms).toBe(300_000);
 
     // qa
     expect(config.qa.enabled).toBe(true);

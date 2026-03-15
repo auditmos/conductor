@@ -73,28 +73,57 @@ async function runPipeline(
     reviewComments = await github.getReviewComments(existingState.prNumber);
   }
 
-  const prompt = buildPrompt(config.promptTemplate, issue, prd, reviewComments);
-  const agentResult = await runAgent({ cwd: dir, prompt, config });
+  let prompt = buildPrompt(config.promptTemplate, issue, prd, reviewComments);
+  const maxAttempts = config.agent.retry_budget + 1;
 
-  if (!agentResult.ok) {
-    state = updateIssue(state, issue.number, {
-      phase: "IMPLEMENT",
-      branch,
-      retries: agentResult.attempts,
-    });
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    const agentResult = await runAgent({ cwd: dir, prompt, config });
+
+    if (!agentResult.ok) {
+      state = updateIssue(state, issue.number, {
+        phase: "IMPLEMENT",
+        branch,
+        retries: attempt,
+      });
+      await saveState(statePath, state);
+      return "IMPLEMENT";
+    }
+
+    state = updateIssue(state, issue.number, { phase: "VALIDATE", branch });
     await saveState(statePath, state);
-    return "IMPLEMENT";
-  }
 
-  state = updateIssue(state, issue.number, { phase: "VALIDATE", branch });
-  await saveState(statePath, state);
+    // VALIDATE
+    const validationResult = await runValidation(
+      config.validate.commands,
+      dir,
+      config.validate.timeout_ms
+    );
 
-  // VALIDATE
-  const validationResult = await runValidation(config.validate.commands, dir);
-  if (!validationResult.ok) {
-    state = updateIssue(state, issue.number, { phase: "VALIDATE" });
+    if (validationResult.ok) {
+      break;
+    }
+
+    // Exhausted retries — give up
+    if (attempt >= maxAttempts) {
+      state = updateIssue(state, issue.number, { phase: "VALIDATE", retries: attempt });
+      await saveState(statePath, state);
+      return "VALIDATE";
+    }
+
+    // Retry: build a new prompt with validation error context
+    prompt = [
+      prompt,
+      "",
+      "## Validation failed",
+      `Command: ${validationResult.command}`,
+      "Output:",
+      validationResult.output,
+      "",
+      "Please fix the validation errors and try again.",
+    ].join("\n");
+
+    state = updateIssue(state, issue.number, { phase: "IMPLEMENT", branch, retries: attempt });
     await saveState(statePath, state);
-    return "VALIDATE";
   }
 
   state = updateIssue(state, issue.number, { phase: "QA" });
@@ -114,7 +143,7 @@ async function runPipeline(
   // PR: push and create
   const force = isRework;
   await pushBranch(dir, branch, force);
-  const validationOutput = validationResult.ok ? "All checks passed" : "";
+  const validationOutput = "All checks passed";
   const prNumber = await createPR(github, config, issue, branch, validationOutput);
 
   // Transition to review

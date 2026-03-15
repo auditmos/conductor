@@ -46,4 +46,18 @@ describe("runValidation", () => {
     expect(mockExecaCommand).toHaveBeenCalledWith("pnpm lint", { cwd: "/work" });
     expect(mockExecaCommand).toHaveBeenCalledWith("pnpm test", { cwd: "/work" });
   });
+
+  it("passes timeout to execaCommand when provided", async () => {
+    mockExecaCommand.mockResolvedValueOnce({} as never);
+
+    await runValidation(["pnpm lint"], "/work", 60_000);
+    expect(mockExecaCommand).toHaveBeenCalledWith("pnpm lint", { cwd: "/work", timeout: 60_000 });
+  });
+
+  it("does not set timeout when not provided", async () => {
+    mockExecaCommand.mockResolvedValueOnce({} as never);
+
+    await runValidation(["pnpm lint"], "/work");
+    expect(mockExecaCommand).toHaveBeenCalledWith("pnpm lint", { cwd: "/work" });
+  });
 });

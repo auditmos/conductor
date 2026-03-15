@@ -2,10 +2,14 @@ import { execaCommand } from "execa";
 
 export type ValidationResult = { ok: true } | { ok: false; command: string; output: string };
 
-export async function runValidation(commands: string[], cwd: string): Promise<ValidationResult> {
+export async function runValidation(
+  commands: string[],
+  cwd: string,
+  timeout?: number
+): Promise<ValidationResult> {
   for (const command of commands) {
     try {
-      await execaCommand(command, { cwd });
+      await execaCommand(command, { cwd, ...(timeout != null && { timeout }) });
     } catch (error) {
       const { stdout = "", stderr = "" } = error as { stdout?: string; stderr?: string };
       const raw = [stdout, stderr].filter(Boolean).join("\n");

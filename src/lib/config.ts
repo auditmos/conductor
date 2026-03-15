@@ -41,6 +41,7 @@ const agentSchema = z.object({
 
 const validateSchema = z.object({
   commands: z.array(z.string()).default([]),
+  timeout_ms: z.number().default(300_000),
 });
 
 const devServerSchema = z.object({
