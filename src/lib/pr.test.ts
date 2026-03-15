@@ -1,4 +1,4 @@
-import { execaCommand } from "execa";
+import { execa, execaCommand } from "execa";
 import { describe, expect, it, type MockedFunction, vi } from "vitest";
 import type { ConductorConfig } from "./config.js";
 import type { Issue } from "./github.js";
@@ -6,6 +6,7 @@ import { buildPRBody, commitChanges, createPR, pushBranch } from "./pr.js";
 
 vi.mock("execa");
 
+const mockExeca = execa as unknown as MockedFunction<typeof execa>;
 const mockExecaCommand = execaCommand as unknown as MockedFunction<typeof execaCommand>;
 
 describe("pushBranch", () => {
@@ -32,24 +33,23 @@ describe("pushBranch", () => {
 });
 
 describe("commitChanges", () => {
-  it("stages all changes and commits with issue-based message", async () => {
+  it("stages all changes and commits with issue-based message using execa args array", async () => {
+    mockExeca.mockResolvedValue({} as never);
     mockExecaCommand.mockResolvedValue({} as never);
 
-    await commitChanges("/tmp/ws", 42, "Fix login bug");
+    await commitChanges("/tmp/ws", 42, "DB Schema & Project Management API");
 
     expect(mockExecaCommand).toHaveBeenCalledWith("git add -A", { cwd: "/tmp/ws" });
-    expect(mockExecaCommand).toHaveBeenCalledWith(
-      expect.stringContaining("git commit"),
-      expect.objectContaining({ cwd: "/tmp/ws" })
+    expect(mockExeca).toHaveBeenCalledWith(
+      "git",
+      ["commit", "-m", "feat(#42): DB Schema & Project Management API"],
+      { cwd: "/tmp/ws" }
     );
-    const commitCall = mockExecaCommand.mock.calls.find((c) =>
-      (c[0] as string).includes("git commit")
-    );
-    expect(commitCall?.[0]).toContain("#42");
   });
 
   it("returns true when there are changes to commit", async () => {
     mockExecaCommand.mockResolvedValue({} as never);
+    mockExeca.mockResolvedValue({} as never);
 
     const result = await commitChanges("/tmp/ws", 42, "Fix login bug");
 
@@ -57,9 +57,8 @@ describe("commitChanges", () => {
   });
 
   it("returns false when there are no changes to commit", async () => {
-    mockExecaCommand
-      .mockResolvedValueOnce({} as never) // git add -A
-      .mockRejectedValueOnce(new Error("nothing to commit")); // git commit fails
+    mockExecaCommand.mockResolvedValue({} as never); // git add -A
+    mockExeca.mockRejectedValueOnce(new Error("nothing to commit")); // git commit fails
 
     const result = await commitChanges("/tmp/ws", 42, "Fix login bug");
 

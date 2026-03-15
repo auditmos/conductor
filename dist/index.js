@@ -297,11 +297,11 @@ var GitHubClient = class {
 };
 
 // src/lib/pr.ts
-import { execaCommand } from "execa";
+import { execa as execa2, execaCommand } from "execa";
 async function commitChanges(cwd, issueNumber, title) {
   await execaCommand("git add -A", { cwd });
   try {
-    await execaCommand(`git commit -m "feat(#${issueNumber}): ${title}"`, { cwd });
+    await execa2("git", ["commit", "-m", `feat(#${issueNumber}): ${title}`], { cwd });
     return true;
   } catch {
     return false;

@@ -1,4 +1,4 @@
-import { execaCommand } from "execa";
+import { execa, execaCommand } from "execa";
 import type { ConductorConfig } from "./config.js";
 import type { GitHubClient, Issue } from "./github.js";
 
@@ -9,7 +9,7 @@ export async function commitChanges(
 ): Promise<boolean> {
   await execaCommand("git add -A", { cwd });
   try {
-    await execaCommand(`git commit -m "feat(#${issueNumber}): ${title}"`, { cwd });
+    await execa("git", ["commit", "-m", `feat(#${issueNumber}): ${title}`], { cwd });
     return true;
   } catch {
     return false;
